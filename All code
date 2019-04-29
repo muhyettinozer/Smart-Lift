@@ -1,0 +1,169 @@
+#include <GSM.h>
+
+GSM gsmAccess;
+GSMVoiceCall VCS;
+GSM_SMS sms;
+Int;
+int floorNo;
+Boolean giveUp;
+Boolean hasActiveCall;
+Boolean isReached;
+karakter devetüyü [20];
+
+#define
+PWM_A = 3,
+DIR_A = 12,
+BRAKE_A = 9,
+SNS_A = A0;
+
+Yaylı getVoiceCall () {
+{(No) geçiş
+case 0:
+"053********" return;
+dava 1:
+"053********" return;
+case 2:
+"05********" return;
+case 3:
+"05********* return;
+case 4:
+"0555 555 5555" return;
+}
+dönüş "";
+}
+
+goToFloor (int newFloorNo) {geçersiz
+Eğer (floorNo == newFloorNo)
+dönüş;
+
+BOOL firstMovement = gerçek;
+int currentFloorNo = floorNo;
+digitalWrite (BRAKE_A, DÜŞÜK); // ayarı fren DÜŞÜK devre dışı motor freni
+Eğer (floorNo> newFloorNo) {
+digitalWrite (DIR_A, DÜŞÜK);
+} Başka {
+digitalWrite (DIR_A, HIGH);
+}
+iken (currentFloorNo! = newFloorNo) {
+Eğer (firstMovement) {
+analogWrite (PWM_A, 50);
+gecikmesi (150);
+firstMovement = false;
+} Başka {
+analogWrite (PWM_A, 150);
+gecikmesi (50);
+}
+analogWrite (PWM_A, 150);
+gecikmesi (100);
+Eğer (currentFloorNo <newFloorNo) {
+currentFloorNo ++;
+} Başka {
+currentFloorNo--;
+}
+Eğer (currentFloorNo == newFloorNo) {
+analogWrite (PWM_A, 50);
+gecikmesi (150);
+digitalWrite (BRAKE_A, YÜKSEK);
+} Başka {
+analogWrite (PWM_A, 150);
+gecikmesi (50);
+}
+}
+}
+
+void setup ()
+{
+Serial.begin (9600);
+// kaçıncı numarayı aradığını belirtiyor.
+0 = yok;
+// Tanımlanmış 5 numaranın hiçbirine ulaşamazsa kodu durdurmak Için
+= Gerçek giveUp;
+hasActiveCall = false;
+= False isReached;
+// Kat Numarası Başlangıç Değeri
+floorNo = 0;
+// 5 numaralı pin giriş Olarak tanımlandı, dahili numara pullup direnci açıldı
+pinMode (5, INPUT_PULLUP);
+pinMode (BRAKE_A, ÇIKIŞ);
+pinMode (DIR_A, ÇIKIŞ);
+// GSM erişimini sağlayana Kadar Bağlantı kurmaya çalışıyor.
+Boolean NotConnected = gerçek;
+ise (NotConnected)
+{
+Eğer (gsmAccess.begin () == GSM_READY)
+= False NotConnected;
+Başka
+{
+Serial.println ( "bağlı değil");
+Gecikme (1000);
+}
+}
+Serial.println ( "GSM başlatıldı.");
+}
+
+void döngü ()
+{
+// Butona basıldı mı
+Boolean ButtonPressed = digitalRead (5) == YÜKSEK;
+Eğer (ButtonPressed && giveUp)
+{
+digitalWrite (5, DÜŞÜK);
+= Yanlış giveUp;
+0 = yok;
+Serial.println ( "Butona ilk temeli.");
+}
+if (! giveUp &&! isReached) {
+if (! hasActiveCall) {
+. GetVoiceCall () toCharArray (buff, 20);
+Serial.println ( "Aranıyor ..");
+vcs.voiceCall (buff);
+hasActiveCall = Gerçek;
+}
+// aramanın Durumunu Kontrol et, ona göre tepki ver.
+anahtarı (vcs.getvoiceCallStatus ())
+{
+vaka IDLE_CALL:
+hasActiveCall = false;
+= False isReached;
+Serial.println ( "Atıl");
+break;
+
+vaka ARAMA:
+hasActiveCall = false;
+= False isReached;
+Serial.println ( "Çağrı");
+break;
+
+vaka RECEIVINGCALL:
+break;
+
+vaka KONUŞMA:
+Serial.println ( "Hayır ulaştı");
+= Gerçek isReached;
+= Gerçek giveUp;
+0 = yok;
+Serial.println ( "konuşan kesmek satırını girin.");
+iken (Serial.read ()! = '\ n')
+gecikmesi (100);
+vcs.hangCall ();
+hasActiveCall = false;
+Serial.println ( "Asılmış, başarısı.");
+break;
+}
+if (! isReached && vcs.ready ()) {
+Serial.println ( "hayır erişilemiyor");
+++ No;
+Eğer (no> 4) {
+= Gerçek giveUp;
+ise (bir> = 0) {
+. GetVoiceCall () toCharArray (buff, 20);
+sms.beginSMS (buff);
+sms.print ( "asansörde kaldik, acil durum!");
+sms.endSMS ();
+yok hayır--;
+}
+0 = yok;
+}
+}
+}
+}
